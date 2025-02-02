@@ -1,12 +1,13 @@
 -- Todo --
--- Round end when ball out of bounds
--- gamestate "pause" for round end
--- Points
--- Enemy max speed
--- 
+-- goalPause needs to be handled somehow
+-- maybe gameloop with loads and updates in function
+-- then flag for goalPause and if its true -> run the gameloop function 
 
 PLAYER_SPEED = 200
 BALL_SPEED = 100
+ENEMY_MAXSPEED = 250
+PLAYER_POINTS = 0
+ENEMY_POINTS = 0
 
 -- Menu
 local gameState = "menu"
@@ -52,8 +53,8 @@ function drawGame()
     love.graphics.setFont(love.graphics.newFont(15))
     love.graphics.setColor(1, 1, 1)  -- Set text color to white
     love.graphics.print("Ball Speed: " .. string.format("%.2f", ball.speed), 10, 10)  -- Display speed at top-left corner
-    --love.graphics.print("vx: " .. string.format("%.2f", ball.vx), 10, 30)
-    --love.graphics.print("vx: " .. string.format("%.2f", ball.vy), 10, 50)
+    love.graphics.print("Player: " .. (PLAYER_POINTS), 10, 30)
+    love.graphics.print("Enemy: " .. (ENEMY_POINTS), 10, 50)
 end
 
 function loadPlayer()
@@ -115,8 +116,35 @@ function updatePlayer(dt)
     end
 end
 
+-- Enemy
+local enemyMaxSpeed = ENEMY_MAXSPEED
+
 function updateEnemy(dt)
-    enemy.x = ball.x
+    -- Calculate the difference between the ball and enemy position
+    local diff = ball.x - enemy.x
+
+    -- Adjust the speed to follow the ball, but limit it to maxSpeed
+    if math.abs(diff) > 5 then  -- Add a threshold to prevent jittering when close to the ball
+        -- Normalize the difference to move with the enemyMaxSpeed
+        local direction = math.sign(diff)  -- Get the direction to move in (1 or -1)
+
+        -- Move the enemy based on the direction, clamped by enemyMaxSpeed
+        enemy.x = enemy.x + direction * enemyMaxSpeed * dt
+
+        -- Make sure the enemy stays within the screen bounds
+        if enemy.x < 0 then
+            enemy.x = 0
+        elseif enemy.x > love.graphics.getWidth() - enemy.width then
+            enemy.x = love.graphics.getWidth() - enemy.width
+        end
+    end
+end
+
+-- Utility function for the direction of movement
+function math.sign(x)
+    if x > 0 then return 1 end
+    if x < 0 then return -1 end
+    return 0
 end
 
 function updateBall(dt)
@@ -169,9 +197,44 @@ function adjustBallAngle(ball, paddle)
     ball.vy = math.sin(angle) * ball.speed
 end
 
+-- Pause
+function drawPauseScreen()
+    -- Set background color or darken the screen for the pause effect
+    love.graphics.setColor(0, 0, 0, 0.5)  -- Semi-transparent black background
+    love.graphics.rectangle("fill", 0, 0, love.graphics.getWidth(), love.graphics.getHeight())  -- Draw rectangle to cover the screen
 
+    -- Draw the pause message
+    love.graphics.setColor(1, 1, 1)  -- Set text color to white
+    love.graphics.setFont(love.graphics.newFont(30))  -- Set font size for the pause message
+    love.graphics.printf("Game Paused", 0, love.graphics.getHeight() / 2 - 40, love.graphics.getWidth(), "center")
 
-----------------------GAME LOOP STARTS------------------------
+    -- Draw resume instructions
+    love.graphics.setFont(love.graphics.newFont(20))  -- Set font size for instructions
+    love.graphics.printf("Press 'P' to Resume", 0, love.graphics.getHeight() / 2 + 20, love.graphics.getWidth(), "center")
+end
+
+function checkGoal()
+    if ball.y > love.graphics.getHeight() then
+        gameState = "pause"
+        PLAYER_POINTS = PLAYER_POINTS + 1
+    elseif ball.y < 0 then
+        gameState = "pause"
+        ENEMY_POINTS = ENEMY_POINTS + 1
+    end
+end
+
+function love.keypressed(key, scancode, isrepeat)
+    if key == "p" then
+        -- Toggle between "pause" and "game" when "p" is pressed
+        if gameState == "pause" then
+            gameState = "game"  -- Resume the game
+        else
+            gameState = "pause"  -- Pause the game
+        end
+    end
+end
+
+----------------------GAME LOOP------------------------
 function love.load()
     loadPlayer()
     loadEnemy()
@@ -182,6 +245,9 @@ end
 
 
 function love.update(dt)
+    if gameState == "pause" then
+        love.keypressed()
+    end
     if gameState == "game" then
         updatePlayer(dt)
         updateEnemy(dt)
@@ -205,6 +271,7 @@ function love.update(dt)
             adjustBallAngle(ball, enemy)
         end
     end
+    checkGoal()
 end
 
 
@@ -213,5 +280,7 @@ function love.draw()
         drawMainMenu()
     elseif gameState == "game" then
         drawGame()
+    elseif gameState == "pause" then
+        drawPauseScreen()
     end
 end
