@@ -1,8 +1,60 @@
--- Todo
--- Max ball speed
+-- Todo --
+-- Round end when ball out of bounds
+-- gamestate "pause" for round end
+-- Points
+-- Enemy max speed
+-- 
 
 PLAYER_SPEED = 200
 BALL_SPEED = 100
+
+-- Menu
+local gameState = "menu"
+local button = {}
+button.x = love.graphics.getWidth() / 2 - 75  -- Center button horizontally
+button.y = love.graphics.getHeight() / 2 - 25  -- Center button vertically
+button.width = 150
+button.height = 50
+
+-- gamestate == "menu"
+function drawMainMenu()
+    love.graphics.setColor(1, 1, 1)  -- White color for text and button
+    love.graphics.rectangle("fill", button.x, button.y, button.width, button.height)  -- Draw button
+    love.graphics.setFont(love.graphics.newFont(15))
+    love.graphics.setColor(0, 0, 0)  -- Black text color
+    love.graphics.printf("Start Game", button.x, button.y + 15, button.width, "center")  -- Center the text
+end
+
+function love.mousepressed(x, y, mouseButton, istouch, presses)
+    if gameState == "menu" then
+        -- Check if the click is within the button's bounds
+        if x >= button.x and x <= button.x + button.width and y >= button.y and y <= button.y + button.height then
+            -- Change game state to "game"
+            gameState = "game"
+        end
+    end
+end
+
+-- gamestate == "game"
+function drawGame()
+    love.graphics.draw(background,0,0)
+
+    -- Draw Player
+    love.graphics.rectangle("fill", player.x - player.width / 2, player.y - player.height / 2, player.width, player.height)
+
+    -- Draw Enemy
+    love.graphics.rectangle("fill", enemy.x - enemy.width / 2, enemy.y - enemy.height / 2, enemy.width, enemy.height)
+
+    -- Draw Ball
+    love.graphics.circle("fill", ball.x, ball.y, ball.radius)
+
+    -- Display Ball Speed
+    love.graphics.setFont(love.graphics.newFont(15))
+    love.graphics.setColor(1, 1, 1)  -- Set text color to white
+    love.graphics.print("Ball Speed: " .. string.format("%.2f", ball.speed), 10, 10)  -- Display speed at top-left corner
+    --love.graphics.print("vx: " .. string.format("%.2f", ball.vx), 10, 30)
+    --love.graphics.print("vx: " .. string.format("%.2f", ball.vy), 10, 50)
+end
 
 function loadPlayer()
     player = {}
@@ -130,47 +182,36 @@ end
 
 
 function love.update(dt)
-    updatePlayer(dt)
-    updateEnemy(dt)
-    updateBall(dt)
+    if gameState == "game" then
+        updatePlayer(dt)
+        updateEnemy(dt)
+        updateBall(dt)
 
-    if checkCollision(ball, player) then
-        ball.vy = -math.abs(ball.vy)  -- Always bounce upward
-        ball.y = player.y - player.height / 2 - ball.radius  -- Move ball above paddle
-        if ball.speed < 400 then
-            increaseBallSpeed()
+        if checkCollision(ball, player) then
+            ball.vy = -math.abs(ball.vy)  -- Always bounce upward
+            ball.y = player.y - player.height / 2 - ball.radius  -- Move ball above paddle
+            if ball.speed < 400 then
+                increaseBallSpeed()
+            end
+            adjustBallAngle(ball, player)
         end
-        adjustBallAngle(ball, player)
-    end
 
-    if checkCollision(ball, enemy) then
-        ball.vy = math.abs(ball.vy)  -- Always bounce downward
-        ball.y = enemy.y + enemy.height / 2 + ball.radius  -- Move ball below paddle
-        if ball.speed < 400 then
-            increaseBallSpeed()
+        if checkCollision(ball, enemy) then
+            ball.vy = math.abs(ball.vy)  -- Always bounce downward
+            ball.y = enemy.y + enemy.height / 2 + ball.radius  -- Move ball below paddle
+            if ball.speed < 400 then
+                increaseBallSpeed()
+            end
+            adjustBallAngle(ball, enemy)
         end
-        adjustBallAngle(ball, enemy)
     end
 end
 
 
 function love.draw()
-    love.graphics.draw(background,0,0)
-
-    -- Draw Player
-    love.graphics.rectangle("fill", player.x - player.width / 2, player.y - player.height / 2, player.width, player.height)
-
-    -- Draw Enemy
-    love.graphics.rectangle("fill", enemy.x - enemy.width / 2, enemy.y - enemy.height / 2, enemy.width, enemy.height)
-
-    -- Draw Ball
-    love.graphics.circle("fill", ball.x, ball.y, ball.radius)
-
-    -- Display Ball Speed
-    love.graphics.setFont(love.graphics.newFont(20))  -- Set font size to 20
-    love.graphics.setColor(1, 1, 1)  -- Set text color to white (default)
-    love.graphics.print("Ball Speed: " .. string.format("%.2f", ball.speed), 10, 10)  -- Display speed at top-left corner
-    --love.graphics.print("vx: " .. string.format("%.2f", ball.vx), 10, 30)
-    --love.graphics.print("vx: " .. string.format("%.2f", ball.vy), 10, 50)
-    
+    if gameState == "menu" then
+        drawMainMenu()
+    elseif gameState == "game" then
+        drawGame()
+    end
 end
